@@ -1,6 +1,29 @@
 const { input, select, checkbox } = require('@inquirer/prompts');
+const fs = require('fs').promises;
 
-let metas = []
+
+async function salvarMetas() {
+    try {
+        await fs.writefile('metas.json', JSON.stringify(metas, null, 2));
+        mostrarMensagens('Metas salvas com sucesso!');
+    } catch (error) {
+        mostrarMensagens('Erro ao salvar metas:',  error.mensagem);
+    }
+}
+
+async function carregarMetas() {
+    try {
+        const dados = await fs.readFile('metas.json', 'utf-8');
+        metas = JSON.parse(dados);
+        mostrarMensagens('Metas carregadas com sucesso!');
+    } catch (error) {
+        metas = [];
+        mostrarMensagens('Nenhum arquivo de metas encontrado. Iniciando com uma lista vazia.');
+    }
+}
+       
+
+let metas = [];
 
 function limparTela() {
     console.clear();
@@ -19,6 +42,7 @@ async function mostrarMenu() {
             { name: "Marcar metas como realizadas", value: "marcar" },
             { name: "Mostrar metas realizadas", value: "realizadas" },
             { name: "Mostrar metas abertas", value: "abertas" },
+            { name: "Deletar metas", value: "deletar" },
             { name: "Sair", value: "sair" }
         ]
     });
@@ -42,7 +66,10 @@ async function executarAcao(opcao) {
             break; 
         case "abertas":
             await metasAbertas();
-            break;       
+            break;    
+        case "deletar":
+            await deletarMetas();
+            break;   
         case "sair":
             break;
         default:
@@ -52,6 +79,7 @@ async function executarAcao(opcao) {
 
 async function iniciar() {
     limparTela();
+    await carregarMetas();
     mostrarMensagem("=== 📱Sistema de Metas Pessoais ===");
 
     while (true) {
@@ -65,6 +93,7 @@ async function iniciar() {
         }
 
         await executarAcao(opcao);
+        await salvarMetas();
     }
 }
 
@@ -162,5 +191,34 @@ async function metasAbertas() {
 
     mostrarMensagem(`Você ainda tem ${abertas.length} metas para concluir. Vamos lá! 🚀`);
 }
+
+async function deletarMetas() {
+
+    if (metas.length === 0) {
+        mostrarMensagem(" ⛔ Não existem metas cadastradas!");
+        return;
+    }
+
+    const metasSelecionadas = await checkbox({
+        message: "📝 Selecione as metas que você deseja deletar:",
+        choices: metas.map(meta => 
+            ({ name: meta.value, 
+               value: meta.value, 
+               checked: false
+            })),
+    });
+
+    if(metasParaDeletar.length === 0) {
+        mostrarMensagem("❌ Nenhuma meta selecionada para deletar.");
+        return;
+    }
+
+    metasParaDeletar.forEach(metaParaDeletar => {
+        metas = metas.filter(meta => meta.value !== metaParaDeletar);
+    });
+
+    mostrarMensagem("✅ Metas deletadas com sucesso!");
+
+}   
 
 iniciar();
